@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "influx-python-client"
+version = "0.1.0"
+description = ""
+authors = ["Igor Mathenko <igor@matchenko.com>"]
+readme = "README.md"
+packages = [{include = "influx_client"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+influxdb-client = "1.45.0"
+pydantic = "2.8.2"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
