@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "influx-python-client"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Igor Mathenko <igor@matchenko.com>"]
 readme = "README.md"
@@ -10,6 +10,7 @@ packages = [{include = "influx_client"}]
 python = "^3.11"
 influxdb-client = "1.45.0"
 pydantic = "2.8.2"
+python-dateutil = "2.9.0"
 
 
 [build-system]

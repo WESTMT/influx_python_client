@@ -6,16 +6,18 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client.rest import ApiException
 
 from influx_client.functions import range_func, group_func, limit_func
+from influx_client.validators import validate_iso_8601_timestamp
 
 logger = logging.getLogger(__name__)
 
 
 class DBClient:
-    def __init__(self, url: str, token: str, bucket: str, org: str = 'westrade'):
+    def __init__(self, url: str, token: str, bucket: str = None, org: str = 'westrade'):
         self.org = org
         self.bucket = bucket
 
         self._write_api_sync = None
+        self._delete_api = None
         self._query_api = None
 
         self._client = influxdb_client.InfluxDBClient(
@@ -36,6 +38,37 @@ class DBClient:
             logger.info(f'{len(points)} points written to InfluxDB')
         except Exception:
             logger.exception('Error writing to InfluxDB')
+
+    def delete(self, start_timestamp: str, stop_timestamp: str,
+               measurement: str = None, tags: dict = None, bucket: str = None):
+        """
+        https://docs.influxdata.com/influxdb/v2/write-data/delete-data/
+
+        Example:
+            client.delete(
+            '2024-08-29T08:44:12.395661+00:00', '2024-09-01T08:44:12.395661+00:00,
+            measurement='elastic_net_v4.pkl', tags={'station': '04D11D0D'})
+        """
+
+        if not all((validate_iso_8601_timestamp(start_timestamp), validate_iso_8601_timestamp(stop_timestamp))):
+            raise ValueError('Start and stop timestamps should be in RF3339 format,'
+                             ' see https://docs.influxdata.com/influxdb/v2/reference/glossary/#rfc3339-timestamp.')
+
+        if bucket is None:
+            bucket = self.bucket
+
+        if tags is None:
+            tags = {}
+
+        if not self._delete_api:
+            self._delete_api = self._client.delete_api()
+
+        self._delete_api.delete(
+            start=start_timestamp,
+            stop=stop_timestamp,
+            predicate=self._build_delete_predicate(measurement=measurement, **tags),
+            bucket=bucket,
+        )
 
     def query(self, start_range: str, stop_range: str = None, query_functions: list[Callable] = None,
               group_columns: list[str] = None, limit_groups: int = 0, bucket: str = None, json: bool = True):
@@ -84,6 +117,28 @@ class DBClient:
         except ApiException as ex:
             logger.exception(f'Error querying InfluxDB: {ex}')
             raise ValueError(f'Error during query: "{ex.message}"')
+
+    @staticmethod
+    def _build_delete_predicate(measurement: str = None, **kwargs) -> str:
+        """
+        https://docs.influxdata.com/influxdb/v2/reference/syntax/delete-predicate/
+        """
+
+        _delimiter = ' AND '
+        predicate = ''
+
+        if measurement is None and not len(kwargs):
+            raise ValueError('You should provide at least one tag or specify a measurement.')
+
+        tags = _delimiter.join((f'{key}="{value}"' for key, value in kwargs.items()))
+        if measurement:
+            predicate += f'_measurement="{measurement}"'
+        if tags:
+            predicate += f'{_delimiter}{tags}'
+
+        logger.info(predicate)
+
+        return predicate
 
     @staticmethod
     def _build_query(query_functions: list, bucket: str) -> str:
