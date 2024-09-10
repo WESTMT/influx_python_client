@@ -42,8 +42,38 @@ class limit_func(BaseFunction):
     NAME = 'limit'
 
 
+class aggregate_window_func(BaseFunction):
+    """
+    https://docs.influxdata.com/flux/v0/stdlib/universe/aggregateWindow/
+    """
+    NAME = 'aggregateWindow'
+
 class group_func(BaseFunction):
     """
     https://docs.influxdata.com/flux/v0/stdlib/universe/group/
     """
     NAME = 'group'
+
+
+class last_func(BaseFunction):
+    """
+    https://docs.influxdata.com/flux/v0/stdlib/universe/last/
+    """
+    NAME = 'last'
+
+
+# Implementing the FillFunction class
+class fill_func(BaseFunction):
+    NAME = 'fill'
+
+    def __init__(self, /, value=None, usePrevious=None, column=None):
+        if sum(arg is not None for arg in [value, usePrevious, column]) != 1:
+            raise ValueError("Exactly one of 'value', 'usePrevious', or 'column' must be provided.")
+
+        if value is not None:
+            super().__init__(value=value)
+        elif usePrevious is not None:
+            # Ensure that `usePrevious` is correctly output as `true` or `false` in Flux syntax
+            super().__init__(usePrevious=str(usePrevious).lower())
+        elif column is not None:
+            super().__init__(column=column)

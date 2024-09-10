@@ -5,7 +5,7 @@ import influxdb_client
 from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client.rest import ApiException
 
-from influx_client.functions import range_func, group_func, limit_func
+from influx_client.functions import range_func, group_func, limit_func, filter_func
 from influx_client.validators import validate_iso_8601_timestamp
 
 logger = logging.getLogger(__name__)
@@ -83,18 +83,26 @@ class DBClient:
             )
         """
 
+        # Initialize the range function
         range_ = range_func(start=start_range, stop=stop_range) if stop_range else range_func(start=start_range)
-        functions = [range_]
 
-        if group_columns:
-            functions.append(group_func(columns=group_columns))
-        else:
-            functions.append(group_func())
+        # Initialize lists for different types of functions
+        filter_functions = []
+        group_function = group_func(columns=group_columns) if group_columns else group_func()
+        other_functions = []
 
-        if limit_groups:
-            functions.append(limit_func(n=limit_groups))
+        # Sort the query_functions into appropriate lists
+        for func in (query_functions or []):
+            if isinstance(func, filter_func):
+                filter_functions.append(func)
+            elif isinstance(func, group_func):
+                group_function = func  # This overrides the default group function if one is provided in the list
+            else:
+                other_functions.append(func)
 
-        functions.extend(query_functions or [])
+        # Combine all functions in the desired order
+        functions = [range_] + filter_functions + [group_function] + other_functions
+
 
         return self._query(query_string=self._build_query(functions, bucket or self.bucket), json=json)
 
