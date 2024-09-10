@@ -134,7 +134,7 @@ class DBClient:
         if measurement:
             predicate += f'_measurement="{measurement}"'
         if tags:
-            predicate += f'{_delimiter}{tags}'
+            predicate += f'{_delimiter if measurement else ""}{tags}'
 
         logger.info(predicate)
 
