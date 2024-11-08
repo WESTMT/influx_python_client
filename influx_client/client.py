@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class DBClient:
-    def __init__(self, url: str, token: str, bucket: str = None, org: str = 'westrade'):
+    def __init__(self, url: str, token: str, bucket: str = None, org: str = 'westrade', timeout: int = 5000):
         self.org = org
         self.bucket = bucket
 
@@ -21,7 +21,7 @@ class DBClient:
         self._query_api = None
 
         self._client = influxdb_client.InfluxDBClient(
-            url=url, token=token, org=self.org
+            url=url, token=token, org=self.org, timeout=timeout
         )
 
     def write_sync(self, points: list, bucket: str = None):
